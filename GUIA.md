@@ -89,6 +89,12 @@ Construye la imagen de la API (también la guarda en `build/libreria-api.tar` pa
 vagrant ssh jmeter -c "bash /vagrant/pruebas/correr.sh compose 1"
 ```
 
+Antes de las pruebas conviene comprobar la API (todas las rutas deben dar `200`, salvo `/api/libros/99999`, que da `404`):
+
+```powershell
+vagrant ssh vm1 -c "bash /vagrant/scripts/verificar.sh"
+```
+
 Unos 5 minutos. Cada línea muestra una carga terminada con su throughput (`/s`), tiempo medio (`Avg`) y errores (`Err`).
 
 ## Paso 3. Fase 2: Kubernetes con 1 nodo
@@ -98,7 +104,7 @@ vagrant ssh vm1 -c "bash /vagrant/scripts/modo-k8s.sh"
 vagrant ssh jmeter -c "bash /vagrant/pruebas/serie-k8s.sh k8s1n"
 ```
 
-`modo-k8s.sh` apaga Docker, enciende k3s y despliega la base y la API. `serie-k8s.sh` corre 1, 2 y 3 réplicas una tras otra (unos 17 minutos) y guarda dónde quedó cada pod y el consumo de CPU y memoria.
+`modo-k8s.sh` apaga Docker, enciende k3s, espera a que vm1 quede `Ready` (puede tardar unos minutos la primera vez) y despliega la base y la API. Para comprobarla: `vagrant ssh vm1 -c "bash /vagrant/scripts/verificar.sh 30080"`. `serie-k8s.sh` espera a que todos los nodos estén `Ready`, reinicia la base (así cada serie parte de los mismos datos), espera a `metrics-server` y corre 1, 2 y 3 réplicas una tras otra (unos 17 minutos) y guarda dónde quedó cada pod y el consumo de CPU y memoria.
 
 ## Paso 4. Fase 3: Kubernetes con 2 nodos
 
@@ -175,6 +181,9 @@ curl.exe -X POST -H "Content-Type: application/json" -d '{\"libro_id\": 5, \"can
 
 | Síntoma | Qué hacer |
 |---|---|
+| Un comando con comillas dentro falla en PowerShell | Usar los scripts del repositorio (`verificar.sh`, etc.) en vez de escribir comandos largos con comillas anidadas |
+| `vagrant up` dice `Timed out while waiting for the machine to boot` | La VM suele arrancar igual, solo tarde: `vagrant provision vm2` (o `vagrant reload vm2 --provision`) |
+| `kubectl get nodes` muestra `NotReady` | Esperar: `vagrant ssh vm1 -c "kubectl wait --for=condition=Ready nodes --all --timeout=600s"` |
 | `vagrant up` dice que VT-x no está disponible | Activar la virtualización en la BIOS y apagar Hyper-V |
 | Las VM van muy lentas (tortuga verde en VirtualBox) | Hyper-V sigue activo: `bcdedit /set hypervisorlaunchtype off`, desactivar Integridad de memoria y reiniciar |
 | `vagrant up vm2` dice que vm1 no está en modo Kubernetes | Ejecutar antes el paso 3 (`modo-k8s.sh`) |

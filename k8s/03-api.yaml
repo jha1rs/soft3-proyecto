@@ -24,7 +24,7 @@ spec:
           matchLabels: {app: api}
       containers:
       - name: api
-        image: libreria-api:1.1
+        image: libreria-api:1.2
         imagePullPolicy: Never      # la imagen se importa en cada nodo desde build/libreria-api.tar
         env:
         - {name: DB_HOST, value: db}

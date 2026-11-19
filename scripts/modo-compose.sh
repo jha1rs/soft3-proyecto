@@ -23,7 +23,7 @@ sudo docker compose down -v --remove-orphans >/dev/null 2>&1 || true
 
 echo "== Construyendo la imagen de la API =="
 sudo docker compose build api
-sudo docker save libreria-api:1.1 -o /vagrant/build/libreria-api.tar
+sudo docker save libreria-api:1.2 -o /vagrant/build/libreria-api.tar
 
 echo "== Levantando base y API =="
 sudo docker compose up -d

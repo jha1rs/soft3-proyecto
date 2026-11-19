@@ -14,7 +14,8 @@ cd /vagrant
 # kubectl de la misma version que el cluster (se instala la primera vez)
 if ! command -v kubectl >/dev/null; then
   VER=$(cut -d+ -f1 build/k3s-version)
-  curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/$VER/bin/linux/amd64/kubectl"
+  ARQ=$(dpkg --print-architecture)   # amd64 o arm64
+  curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/$VER/bin/linux/$ARQ/kubectl"
   sudo install -m 755 /tmp/kubectl /usr/local/bin/kubectl
 fi
 
@@ -24,6 +25,23 @@ NODOS=$(kubectl get nodes --no-headers | awk '$2 == "Ready"' | wc -l)
 echo "== $ESC: $NODOS nodo(s) listos =="
 kubectl get nodes
 mkdir -p resultados/ubicacion resultados/monitoreo
+
+# Base de datos recien cargada al inicio de cada serie, para que todos los escenarios
+# partan de los mismos datos (los pedidos de la serie anterior no se acumulan)
+echo "== Reiniciando la base de datos =="
+kubectl -n libreria rollout restart deployment/db
+kubectl -n libreria rollout status deployment/db --timeout=300s
+for i in $(seq 1 30); do
+  kubectl -n libreria get pods -l app=api -o jsonpath='{.items[*].status.containerStatuses[*].ready}' | grep -q false || break
+  sleep 2
+done
+
+# metrics-server tarda un poco despues de encender k3s; sin el, no se guarda el monitoreo
+echo "== Esperando metrics-server =="
+for i in $(seq 1 40); do
+  kubectl top nodes >/dev/null 2>&1 && break
+  sleep 3
+done
 
 for N in $REPLICAS; do
   echo "== Escalando a $N replica(s) =="

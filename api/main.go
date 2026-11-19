@@ -52,21 +52,6 @@ func main() {
 	db.SetMaxIdleConns(pool)
 	db.SetConnMaxLifetime(30 * time.Minute)
 
-	// La base puede tardar en estar lista: se reintenta hasta 2 minutos
-	for i := 0; ; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		err = db.PingContext(ctx)
-		cancel()
-		if err == nil {
-			break
-		}
-		if i == 60 {
-			log.Fatalf("no se pudo conectar a la base: %v", err)
-		}
-		log.Printf("esperando la base de datos: %v", err)
-		time.Sleep(2 * time.Second)
-	}
-
 	nombre, _ := os.Hostname()
 	app := &App{db: db, replica: nombre}
 
@@ -78,6 +63,7 @@ func main() {
 	}
 
 	// Apagado ordenado: Kubernetes manda SIGTERM al bajar replicas
+	apagado := make(chan struct{})
 	go func() {
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGTERM, os.Interrupt)
@@ -85,10 +71,33 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 		defer cancel()
 		srv.Shutdown(ctx)
+		close(apagado)
+		os.Exit(0) // por si llega mientras todavia espera la base
 	}()
 
+	// El servidor HTTP arranca de una vez: /salud responde aunque la base aun no este lista
+	// (asi Kubernetes no reinicia la replica), y /listo dice cuando ya se puede atender.
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
 	log.Printf("API escuchando en :%s (replica %s, pool %d)", puerto, nombre, pool)
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+
+	// La base puede tardar en estar lista: se reintenta hasta 2 minutos
+	for i := 0; ; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		err = db.PingContext(ctx)
+		cancel()
+		if err == nil {
+			log.Printf("conectado a la base de datos")
+			break
+		}
+		if i == 60 {
+			log.Fatalf("no se pudo conectar a la base: %v", err)
+		}
+		log.Printf("esperando la base de datos: %v", err)
+		time.Sleep(2 * time.Second)
 	}
+	<-apagado
 }
