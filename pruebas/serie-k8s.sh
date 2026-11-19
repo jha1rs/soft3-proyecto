@@ -37,7 +37,11 @@ for N in $REPLICAS; do
   ARCH="resultados/monitoreo/${ESC}_${N}rep.txt"
   : > "$ARCH"
   ( while true; do
-      { echo "=== $(date +%H:%M:%S)"; kubectl top nodes; kubectl -n libreria top pods; } >> "$ARCH" 2>&1
+      # Si metrics-server tarda en responder bajo carga, se reintenta una vez
+      { echo "=== $(date +%H:%M:%S)"
+        kubectl top nodes --request-timeout=8s || { sleep 2; kubectl top nodes --request-timeout=8s; }
+        kubectl -n libreria top pods --request-timeout=8s || { sleep 2; kubectl -n libreria top pods --request-timeout=8s; }
+      } >> "$ARCH" 2>&1
       sleep 10
     done ) &
   MONITOR=$!
