@@ -1,6 +1,6 @@
 # Guía de ejecución
 
-Todo corre en un PC con Windows, VirtualBox y Vagrant. Los comandos se escriben en **PowerShell**, dentro de la carpeta del proyecto (por ejemplo `D:\proyecto\libreria-carga`).
+Todo corre en un PC con Windows, VirtualBox y Vagrant. Los comandos se escriben en **PowerShell**, dentro de la carpeta del proyecto (`D:\proyecto\soft3-proyecto`).
 
 Tiempo aproximado: 30 minutos para crear las máquinas la primera vez y 1 hora de pruebas.
 
@@ -8,21 +8,66 @@ Tiempo aproximado: 30 minutos para crear las máquinas la primera vez y 1 hora d
 
 | VM | CPU | RAM | Papel |
 |---|---|---|---|
-| vm1 | 2 | 4 GB | Docker Compose (fase 1) y servidor de Kubernetes. Siempre aloja PostgreSQL |
-| vm2 | 2 | 3 GB | Segundo nodo de Kubernetes |
-| vm3 | 2 | 3 GB | Tercer nodo de Kubernetes |
-| jmeter | 2 | 2 GB | Genera la carga. Desde aquí se controla todo |
+| vm1 | 2 | 3 GB | Docker Compose (fase 1) y servidor de Kubernetes. Siempre aloja PostgreSQL |
+| vm2 | 2 | 1,5 GB | Segundo nodo de Kubernetes |
+| vm3 | 2 | 1,5 GB | Tercer nodo de Kubernetes |
+| jmeter | 2 | 1,5 GB | Genera la carga. Desde aquí se controla todo |
 
-Con las cuatro encendidas usan 8 CPU virtuales y 12 GB de RAM. Durante las pruebas hay que cerrar todo lo demás en el PC.
+Con las cuatro encendidas usan 8 CPU virtuales y 7,5 GB de RAM, pensado para que Windows conserve sus ~5,5 GB y quede margen. Durante las pruebas hay que cerrar todo lo demás en el PC. Si se cambian los valores en el `Vagrantfile`, aplicar con `vagrant reload <vm>`.
 
-## Requisitos
+## Requisitos (una sola vez)
 
-VirtualBox 7.2, Vagrant 2.4.9 o más reciente, Git, virtualización activada en la BIOS y Hyper-V apagado (`bcdedit /set hypervisorlaunchtype off` y reiniciar). Las VM y las imágenes deben ir a D:
+Programas en `D:\soft3-proyecto`, máquinas virtuales en `D:\VirtualBox VMs` e imágenes de Vagrant en `D:\vagrant.d`. Todo en PowerShell como administrador.
 
-```powershell
-VBoxManage setproperty machinefolder "D:\VirtualBox VMs"
-[Environment]::SetEnvironmentVariable("VAGRANT_HOME", "D:\vagrant.d", "User")
-```
+1. Virtualización activada (Administrador de tareas → Rendimiento → CPU → *Virtualización: Habilitado*).
+2. Apagar Hyper-V y reiniciar. En *Seguridad de Windows → Seguridad del dispositivo → Aislamiento del núcleo*, desactivar *Integridad de memoria*.
+
+   ```powershell
+   bcdedit /set hypervisorlaunchtype off
+   ```
+
+3. Carpetas e instalación:
+
+   ```powershell
+   New-Item -ItemType Directory -Force -Path "D:\soft3-proyecto", "D:\VirtualBox VMs", "D:\vagrant.d", "D:\proyecto"
+   winget install -e --id Microsoft.VCRedist.2015+.x64
+   winget install -e --id Oracle.VirtualBox --location "D:\soft3-proyecto\VirtualBox"
+   winget install -e --id Hashicorp.Vagrant --location "D:\soft3-proyecto\Vagrant"
+   winget install -e --id Git.Git --location "D:\soft3-proyecto\Git"
+   ```
+
+   Comprobar que quedaron en D (si alguno da `False`, instalarlo a mano eligiendo esa carpeta) y reiniciar:
+
+   ```powershell
+   Test-Path "D:\soft3-proyecto\VirtualBox\VBoxManage.exe"
+   Test-Path "D:\soft3-proyecto\Vagrant\bin\vagrant.exe"
+   Test-Path "D:\soft3-proyecto\Git\bin\git.exe"
+   ```
+
+4. VirtualBox en el PATH y datos en D:
+
+   ```powershell
+   $p = [Environment]::GetEnvironmentVariable("Path", "User")
+   [Environment]::SetEnvironmentVariable("Path", "$p;D:\soft3-proyecto\VirtualBox", "User")
+   [Environment]::SetEnvironmentVariable("VAGRANT_HOME", "D:\vagrant.d", "User")
+   ```
+
+   Cerrar y abrir PowerShell de nuevo:
+
+   ```powershell
+   VBoxManage setproperty machinefolder "D:\VirtualBox VMs"
+   VBoxManage --version      # 7.2.x
+   vagrant --version         # 2.4.9 o mas reciente
+   ```
+
+5. Proyecto e imagen de Ubuntu:
+
+   ```powershell
+   cd D:\proyecto
+   git clone https://github.com/jha1rs/soft3-proyecto.git
+   cd soft3-proyecto
+   vagrant box add bento/ubuntu-24.04 --provider virtualbox
+   ```
 
 ## Paso 1. Crear vm1 y la VM de JMeter
 

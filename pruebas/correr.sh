@@ -17,7 +17,7 @@ REPETICIONES=${REPETICIONES:-1}
 RAMPUP=${RAMPUP:-10}               # segundos de subida (se descartan en el analisis)
 DURACION=${DURACION:-60}           # segundos totales de cada prueba
 PAUSA=${PAUSA:-10}
-export JVM_ARGS=${JVM_ARGS:-"-Xms512m -Xmx1g"}
+export JVM_ARGS=${JVM_ARGS:-"-Xms512m -Xmx768m"}
 
 cd /vagrant
 PLAN=jmeter/plan.jmx

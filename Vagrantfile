@@ -14,14 +14,17 @@
 #
 # La carpeta del proyecto queda dentro de cada VM en /vagrant.
 
-# Recursos pensados para un PC de 4 nucleos / 8 hilos y 16 GB de RAM.
-# Con las 4 VM encendidas: 8 CPU virtuales y 12 GB de RAM.
+# Recursos pensados para un PC de 4 nucleos / 8 hilos y 16 GB de RAM, donde Windows
+# ya usa unos 5,5 GB. Con las 4 VM encendidas: 8 CPU virtuales y 7,5 GB de RAM.
+#   vm1: Ubuntu + k3s servidor + PostgreSQL (max 512 MB) + replicas de la API (~20 MB c/u)
+#   vm2, vm3: Ubuntu + k3s agente + replicas de la API
+#   jmeter: Ubuntu + JMeter (heap de 768 MB)
 NODOS = {
-  "vm1" => { ip: "192.168.56.11", cpus: 2, ram: 4096 },
-  "vm2" => { ip: "192.168.56.12", cpus: 2, ram: 3072 },
-  "vm3" => { ip: "192.168.56.13", cpus: 2, ram: 3072 },
+  "vm1" => { ip: "192.168.56.11", cpus: 2, ram: 3072 },
+  "vm2" => { ip: "192.168.56.12", cpus: 2, ram: 1536 },
+  "vm3" => { ip: "192.168.56.13", cpus: 2, ram: 1536 },
 }
-JMETER = { ip: "192.168.56.20", cpus: 2, ram: 2048 }
+JMETER = { ip: "192.168.56.20", cpus: 2, ram: 1536 }
 
 K3S_TOKEN = "proyecto-final-libreria"
 JMETER_VERSION = "5.6.3"
