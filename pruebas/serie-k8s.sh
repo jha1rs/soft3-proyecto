@@ -18,6 +18,8 @@ if ! command -v kubectl >/dev/null; then
   sudo install -m 755 /tmp/kubectl /usr/local/bin/kubectl
 fi
 
+echo "== Esperando a que todos los nodos esten Ready =="
+kubectl wait --for=condition=Ready nodes --all --timeout=600s
 NODOS=$(kubectl get nodes --no-headers | awk '$2 == "Ready"' | wc -l)
 echo "== $ESC: $NODOS nodo(s) listos =="
 kubectl get nodes

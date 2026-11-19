@@ -22,6 +22,11 @@ for i in $(seq 1 60); do
   sleep 2
 done
 
+# Despues de apagar y encender k3s, el nodo puede tardar unos minutos en volver a Ready
+# (recrea la red de los pods). Sin esto, los pods nuevos quedan esperando sin avisar.
+echo "== Esperando a que vm1 este Ready =="
+kubectl wait --for=condition=Ready node/vm1 --timeout=600s
+
 sudo k3s ctr images import /vagrant/build/libreria-api.tar >/dev/null
 # kubeconfig para controlar el cluster desde la VM de JMeter
 sed 's/127.0.0.1/192.168.56.11/' /etc/rancher/k3s/k3s.yaml > /vagrant/build/kubeconfig
