@@ -1,0 +1,44 @@
+# Fase 1: Docker Compose en vm1. Se levanta con scripts/modo-compose.sh
+# Limites de CPU y memoria iguales a los de Kubernetes, para comparar en igualdad.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: libreria
+      POSTGRES_PASSWORD: libreria
+      POSTGRES_DB: libreria
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=100",
+              "-c", "synchronous_commit=off"]
+    volumes:
+      - ../db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # Datos en memoria: cada "up" parte de la misma base recien cargada
+    tmpfs:
+      - /var/lib/postgresql/data
+    cpus: "1"
+    mem_limit: 512m
+    healthcheck:
+      # Lista solo cuando escucha por TCP (despues de la carga) y ya tiene los 10.000 libros
+      test: ["CMD-SHELL", "PGPASSWORD=libreria psql -h 127.0.0.1 -U libreria -d libreria -tAc 'SELECT COUNT(*) >= 10000 FROM libros' | grep -qx t"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  api:
+    build: ../api
+    image: libreria-api:1.0
+    environment:
+      DB_HOST: db
+      DB_POOL: "10"
+      GOMAXPROCS: "1"     # coherente con el limite de 0.5 CPU
+    ports:
+      - "8080:8080"
+    cpus: "0.5"
+    mem_limit: 128m
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/api", "-salud"]
+      interval: 3s
+      timeout: 3s
+      retries: 20

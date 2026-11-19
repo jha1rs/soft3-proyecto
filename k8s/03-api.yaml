@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: libreria
+spec:
+  replicas: 1                 # se cambia con: kubectl scale deployment api -n libreria --replicas=N
+  selector:
+    matchLabels: {app: api}
+  template:
+    metadata:
+      labels: {app: api}
+    spec:
+      terminationGracePeriodSeconds: 10
+      # Reparte las replicas entre los nodos disponibles
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels: {app: api}
+      containers:
+      - name: api
+        image: libreria-api:1.0
+        imagePullPolicy: Never      # la imagen se importa en cada nodo desde build/libreria-api.tar
+        env:
+        - {name: DB_HOST, value: db}
+        - {name: DB_POOL, value: "10"}
+        - {name: GOMAXPROCS, value: "1"}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: 250m, memory: 32Mi}
+          limits: {cpu: 500m, memory: 128Mi}
+        readinessProbe:
+          httpGet: {path: /listo, port: 8080}
+          periodSeconds: 3
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet: {path: /salud, port: 8080}
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: libreria
+spec:
+  type: NodePort
+  selector: {app: api}
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30080

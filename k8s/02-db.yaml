@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: libreria
+spec:
+  replicas: 1                 # la base no se escala
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: db}
+  template:
+    metadata:
+      labels: {app: db}
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: vm1   # siempre en vm1, igual en todos los escenarios
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        args: ["-c", "shared_buffers=128MB", "-c", "max_connections=100", "-c", "synchronous_commit=off"]
+        env:
+        - {name: POSTGRES_USER, value: libreria}
+        - {name: POSTGRES_PASSWORD, value: libreria}
+        - {name: POSTGRES_DB, value: libreria}
+        ports:
+        - containerPort: 5432
+        resources:
+          requests: {cpu: 250m, memory: 256Mi}
+          limits: {cpu: "1", memory: 512Mi}
+        readinessProbe:
+          exec:
+            command: ["sh", "-c", "PGPASSWORD=libreria psql -h 127.0.0.1 -U libreria -d libreria -tAc 'SELECT COUNT(*) >= 10000 FROM libros' | grep -qx t"]
+          periodSeconds: 3
+          timeoutSeconds: 3
+        volumeMounts:
+        - {name: init, mountPath: /docker-entrypoint-initdb.d, readOnly: true}
+        - {name: datos, mountPath: /var/lib/postgresql/data}
+      volumes:
+      - name: init
+        configMap: {name: db-init}
+      - name: datos
+        emptyDir: {}          # base recien cargada en cada despliegue
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: libreria
+spec:
+  selector: {app: db}
+  ports:
+  - port: 5432

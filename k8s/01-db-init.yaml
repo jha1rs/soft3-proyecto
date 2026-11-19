@@ -1,0 +1,87 @@
+# Copia de db/init.sql (generada con scripts/generar-configmap.sh). Postgres lo ejecuta al arrancar vacio.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init
+  namespace: libreria
+data:
+  init.sql: |
+    -- =====================================================================
+    -- Carga de datos de la libreria (PostgreSQL)
+    -- Crea las tablas y genera los datos de prueba:
+    --   12 categorias, 1.000 autores, 10.000 libros  (11.012 registros)
+    -- Los datos son siempre los mismos (semilla fija), asi todos los
+    -- escenarios se prueban con una base identica.
+    -- Lo usan Docker Compose (docker-entrypoint-initdb.d) y Kubernetes (ConfigMap).
+    -- =====================================================================
+
+    CREATE TABLE categorias (
+        id      SERIAL PRIMARY KEY,
+        nombre  TEXT NOT NULL UNIQUE
+    );
+
+    CREATE TABLE autores (
+        id      SERIAL PRIMARY KEY,
+        nombre  TEXT NOT NULL,
+        pais    TEXT NOT NULL
+    );
+
+    CREATE TABLE libros (
+        id            SERIAL PRIMARY KEY,
+        isbn          CHAR(13) NOT NULL UNIQUE,
+        titulo        TEXT NOT NULL,
+        autor_id      INT NOT NULL REFERENCES autores(id),
+        categoria_id  INT NOT NULL REFERENCES categorias(id),
+        anio          INT NOT NULL,
+        precio        NUMERIC(10,2) NOT NULL CHECK (precio > 0),
+        stock         INT NOT NULL CHECK (stock >= 0)
+    );
+    CREATE INDEX libros_categoria_idx ON libros(categoria_id);
+    CREATE INDEX libros_autor_idx ON libros(autor_id);
+
+    CREATE TABLE pedidos (
+        id               BIGSERIAL PRIMARY KEY,
+        libro_id         INT NOT NULL REFERENCES libros(id),
+        cantidad         INT NOT NULL CHECK (cantidad BETWEEN 1 AND 10),
+        precio_unitario  NUMERIC(10,2) NOT NULL,
+        descuento        NUMERIC(10,2) NOT NULL,
+        total            NUMERIC(10,2) NOT NULL,
+        creado           TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- ---------------------------------------------------------------------
+    -- Datos
+    -- ---------------------------------------------------------------------
+    SELECT setseed(0.42);
+
+    INSERT INTO categorias (nombre) VALUES
+      ('Novela'), ('Cuento'), ('Poesia'), ('Ensayo'), ('Historia'), ('Ciencia'),
+      ('Tecnologia'), ('Programacion'), ('Biografia'), ('Infantil'), ('Fantasia'), ('Misterio');
+
+    INSERT INTO autores (nombre, pais)
+    SELECT
+      (ARRAY['Ana','Luis','Carlos','Maria','Jorge','Laura','Andres','Sofia','Diego','Valentina',
+             'Camilo','Paula','Felipe','Daniela','Santiago','Juliana','Mateo','Isabella','Tomas','Gabriela'])[1 + floor(random() * 20)::int]
+      || ' ' ||
+      (ARRAY['Gomez','Rodriguez','Martinez','Lopez','Garcia','Perez','Sanchez','Ramirez','Torres','Rojas',
+             'Vargas','Moreno','Castro','Ortiz','Suarez','Herrera','Jimenez','Diaz','Rincon','Pardo'])[1 + floor(random() * 20)::int],
+      (ARRAY['Colombia','Mexico','Argentina','Chile','Peru','Espana','Uruguay','Ecuador'])[1 + floor(random() * 8)::int]
+    FROM generate_series(1, 1000);
+
+    INSERT INTO libros (isbn, titulo, autor_id, categoria_id, anio, precio, stock)
+    SELECT
+      '979' || lpad(n::text, 10, '0'),
+      (ARRAY['El secreto','La sombra','El camino','La ciudad','El ultimo','La casa','El jardin',
+             'La memoria','El viaje','La voz','El silencio','La noche'])[1 + floor(random() * 12)::int]
+      || ' ' ||
+      (ARRAY['del rio','de los andes','de invierno','de cristal','de la tarde','del norte','de papel',
+             'en llamas','del tiempo','de la montana','sin nombre','del mar'])[1 + floor(random() * 12)::int]
+      || ' ' || n,
+      1 + floor(random() * 1000)::int,
+      1 + floor(random() * 12)::int,
+      1950 + floor(random() * 76)::int,
+      round((15000 + random() * 135000)::numeric, -2),
+      1000
+    FROM generate_series(1, 10000) AS n;
+
+    ANALYZE;
