@@ -18,7 +18,7 @@ if ! command -v kubectl >/dev/null; then
   sudo install -m 755 /tmp/kubectl /usr/local/bin/kubectl
 fi
 
-NODOS=$(kubectl get nodes --no-headers | grep -c " Ready")
+NODOS=$(kubectl get nodes --no-headers | awk '$2 == "Ready"' | wc -l)
 echo "== $ESC: $NODOS nodo(s) listos =="
 kubectl get nodes
 mkdir -p resultados/ubicacion resultados/monitoreo
