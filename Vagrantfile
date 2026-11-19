@@ -106,6 +106,8 @@ SHELL
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-24.04"
   config.vm.box_check_update = false
+  # Con varias VM encendidas en el mismo PC, el arranque puede tardar mas de los 5 min por defecto
+  config.vm.boot_timeout = 900
   config.vm.synced_folder ".", "/vagrant"
 
   config.vm.provider "virtualbox" do |vb|
