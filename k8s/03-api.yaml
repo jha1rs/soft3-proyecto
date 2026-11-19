@@ -12,6 +12,9 @@ spec:
       labels: {app: api}
     spec:
       terminationGracePeriodSeconds: 10
+      # Sin esto Kubernetes crea variables como DB_PORT=tcp://10.43.x.x:5432 a partir del
+      # Service "db", y chocan con las variables de configuracion de la API.
+      enableServiceLinks: false
       # Reparte las replicas entre los nodos disponibles
       topologySpreadConstraints:
       - maxSkew: 1
@@ -25,6 +28,7 @@ spec:
         imagePullPolicy: Never      # la imagen se importa en cada nodo desde build/libreria-api.tar
         env:
         - {name: DB_HOST, value: db}
+        - {name: DB_PORT, value: "5432"}
         - {name: DB_POOL, value: "10"}
         - {name: GOMAXPROCS, value: "1"}
         ports:
