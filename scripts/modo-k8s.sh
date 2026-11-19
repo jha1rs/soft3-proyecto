@@ -29,7 +29,7 @@ kubectl wait --for=condition=Ready node/vm1 --timeout=600s
 
 sudo k3s ctr images import /vagrant/build/libreria-api.tar >/dev/null
 # kubeconfig para controlar el cluster desde la VM de JMeter
-sed 's/127.0.0.1/192.168.56.11/' /etc/rancher/k3s/k3s.yaml > /vagrant/build/kubeconfig
+sed 's/127.0.0.1/vm1/' /etc/rancher/k3s/k3s.yaml > /vagrant/build/kubeconfig
 
 kubectl apply -f /vagrant/k8s/
 echo "== Esperando la base (carga los 10.000 libros al arrancar) =="

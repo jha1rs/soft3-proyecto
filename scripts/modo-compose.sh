@@ -9,11 +9,6 @@ if systemctl is-active --quiet k3s; then
 fi
 sudo /usr/local/bin/k3s-killall.sh >/dev/null 2>&1 || true
 
-for ip in 192.168.56.12 192.168.56.13; do
-  if ping -c1 -W1 "$ip" >/dev/null 2>&1; then
-    echo "AVISO: $ip esta encendida y le quita CPU al PC. Apagarla con: vagrant halt vm2 vm3"
-  fi
-done
 
 echo "== Encendiendo Docker =="
 sudo systemctl start docker.socket docker.service

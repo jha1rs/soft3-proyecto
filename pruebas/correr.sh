@@ -9,7 +9,7 @@
 set -euo pipefail
 
 ESC=$1; REP=$2
-HOST=${HOST:-192.168.56.11}
+HOST=${HOST:-vm1}
 if [ "$ESC" = "compose" ]; then PORT=8080; else PORT=30080; fi
 
 CARGAS=${CARGAS:-"10 25 50 100"}   # usuarios concurrentes

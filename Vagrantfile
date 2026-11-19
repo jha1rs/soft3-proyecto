@@ -60,7 +60,7 @@ SERVIDOR = <<~SHELL
   if ! command -v k3s >/dev/null; then
     curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=stable INSTALL_K3S_SKIP_START=true \
       INSTALL_K3S_SKIP_ENABLE=true K3S_TOKEN=#{K3S_TOKEN} sh -s - server \
-      --node-ip "$IP" --advertise-address "$IP" --tls-san "$IP" --flannel-iface "$IFACE" \
+      --node-ip "$IP" --advertise-address "$IP" --tls-san "$IP" --tls-san vm1 --flannel-iface "$IFACE" \
       --disable traefik --disable servicelb --write-kubeconfig-mode 644
   fi
   # Los nodos y la VM de JMeter usan exactamente la misma version
